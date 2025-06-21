@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
-from utils import validate_json_keys
+from utils import validate_json_keys, validate_json_values
 
 class FeaturesGenerator:
     """
@@ -112,6 +112,9 @@ class FeaturesGenerator:
             features_to_keep = [] # Столбцы только лаговых признаков + столбец индексов
 
             for feature in lag_features_config:
+                validate_json_values("name", feature, str)
+                validate_json_values("source", feature, str)
+                validate_json_values("window", feature, int)
                 df[feature["name"]] = df[feature["source"]].shift(feature["window"]) # Создаём новые признаки
                 features_to_keep.append(feature["name"])
             
@@ -138,7 +141,9 @@ class FeaturesGenerator:
             features_to_keep = [] # Столбцы только сдвиговых признаков + столбец индексов
 
             for feature in shift_features_config:
-                
+                validate_json_values("name", feature, str)
+                validate_json_values("source", feature, str)
+                validate_json_values("window", feature, int)
                 source_col = df[feature["source"]]
                 shifted_col = df[feature["source"]].shift(feature["window"])
 
@@ -171,7 +176,10 @@ class FeaturesGenerator:
             features_to_keep = [] # Столбцы только скользящих статистик + столбец индексов
 
             for feature in rolling_config:
-
+                validate_json_values("name", feature, str)
+                validate_json_values("source", feature, str)
+                validate_json_values("window", feature, int)
+                validate_json_values("agg", feature, str)
                 agg_function = self.agg_functions[feature["agg"]] # устанавливаем выбранную статистику
 
                 df[feature["name"]] = df[feature["source"]].rolling(window=feature["window"]).apply(agg_function, raw=True)  # Создаём новые признаки
@@ -179,6 +187,7 @@ class FeaturesGenerator:
                 lag_window = feature.get("lag_window", None)
 
                 if lag_window != None:
+                    validate_json_values("lag_window", feature, int)
                     df[feature["name"]] = df[feature["name"]].shift(feature["lag_window"])
 
                 features_to_keep.append(feature["name"])
@@ -210,6 +219,9 @@ class FeaturesGenerator:
             df = df.reset_index()
 
             for feature in abs_time_config:
+                validate_json_values("name", feature, str)
+                validate_json_values("source", feature, str)
+                validate_json_values("time_unit", feature, str)
                 # значение периода времени
                 fetch_time_unit = self.time_units[feature["time_unit"]]
 
@@ -223,8 +235,8 @@ class FeaturesGenerator:
                 cycle_function = feature.get("function", None)
 
                 if cycle != None:
-                    if cycle_function == None:
-                        raise ValueError(f"Missing argument [function]. Required values: {cycle_function}")
+                    validate_json_values("function", feature, str)
+                    validate_json_values("cycle", feature, int)
                     cycle_function = self.cycle_function[cycle_function]
 
                     df[feature["name"]] = cycle_function(2 * np.pi * df[feature["name"]] / cycle)
@@ -258,10 +270,11 @@ class FeaturesGenerator:
             index = df.index.name
             df = df.reset_index()
             for feature in relative_time_config:
+                validate_json_values("name", feature, str)
+                validate_json_values("source", feature, str)
+                validate_json_values("time_unit", feature, str)
                 # значение периода времени
                 unit = feature.get("time_unit", None)
-                if unit == None:
-                    raise ValueError(f"Missed key [time_unit]. Required values: {self.time_units}")
                 fetch_time_unit = self.relative_time_units[unit]
                 
                 # столбец, из которого получаем время
