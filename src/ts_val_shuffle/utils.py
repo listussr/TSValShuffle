@@ -1,4 +1,4 @@
-def validate_json_keys(required_keys: dict, keys: dict):
+def validate_json_keys(required_keys: dict, keys: dict) -> None:
     """
     Функция проверки соответствия ключей JSON файла шаблону
 
@@ -14,7 +14,7 @@ def validate_json_keys(required_keys: dict, keys: dict):
             raise KeyError(f"Unsupported tag [{key}]. Required: {required_keys}")
         
 
-def validate_json_values(key: str, dictionary, checking_type=None):
+def validate_json_values(key: str, dictionary, checking_type=None) -> None:
     """
     Функция проверки существования элемента словаря и на соответствие шаблонному типу
 

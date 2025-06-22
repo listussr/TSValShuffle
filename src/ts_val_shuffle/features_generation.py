@@ -63,6 +63,7 @@ class FeaturesGenerator:
         self.config = self.__load_config()
         self.__check_config()
 
+
     def __load_config(self) -> dict:
         """
         Загрузка конфигурации признаков из JSON
@@ -72,7 +73,8 @@ class FeaturesGenerator:
 
         return config
 
-    def __check_config(self):
+
+    def __check_config(self) -> None:
         """
         Проверка на соответствие JSON файла с конфигурацией шаблону
 
@@ -91,6 +93,7 @@ class FeaturesGenerator:
         }
         validate_json_keys(required_basic_keys, self.config.keys())
         validate_json_keys(required_features_keys, self.config["features"].keys())
+
 
     def __generate_lag_features(self, time_series: pd.DataFrame) -> pd.DataFrame:
         """
@@ -248,6 +251,7 @@ class FeaturesGenerator:
 
             return df[features_to_keep]
         
+
     def __generate_relative_time(self, time_series: pd.DataFrame) -> pd.DataFrame:
         """
         Метод генерации 'relative time' признаков
@@ -301,7 +305,6 @@ class FeaturesGenerator:
             return df[features_to_keep]
 
 
-
     def generate_features(self, time_series: pd.DataFrame) -> pd.DataFrame:
         """
         Метод для генерации признаков для временного ряда по заданному шаблону
@@ -320,6 +323,3 @@ class FeaturesGenerator:
         generated_features = generated_features.join(abs_time_df, how='outer')
         generated_features = generated_features.join(relative_time_df, how='outer')
         return generated_features
-        
-
-    
