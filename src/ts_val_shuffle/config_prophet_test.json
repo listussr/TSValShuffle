@@ -1,0 +1,61 @@
+{
+  "features": {
+    "lags": [
+        {
+            "name": "lag_6", 
+            "source": "y", 
+            "window": 6
+        },
+        {
+            "name": "lag_12", 
+            "source": "y", 
+            "window": 12
+        }
+    ],
+    "shift": [
+        {
+            "name": "diff_lag_12",
+            "source": "y", 
+            "window": 12, 
+            "operation": "diff"
+        },
+        {
+            "name": "diff_lag_6",
+            "source": "y", 
+            "window": 6, 
+            "operation": "diff"
+        }
+    ],
+    "rolling": [
+      {
+        "name": "std_7", 
+        "source": "y", 
+        "window": 7, 
+        "agg": "std"
+    },
+      {
+        "name": "mean_5_lag_5", 
+        "source": "y", 
+        "window": 5, 
+        "agg": "mean"
+      }
+    ],
+    "absolute_time": [
+      {
+        "name": "year", 
+        "time_unit": "year",
+        "source": "ds"
+      },
+      {
+        "name": "month_cos", 
+        "cycle": 12, 
+        "time_unit": "month",
+        "function": "cos",
+        "source": "ds"
+      }
+    ]
+  },
+  "options": {
+    "drop_na": true
+  }
+}

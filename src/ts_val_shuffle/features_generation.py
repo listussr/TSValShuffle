@@ -62,6 +62,7 @@ class FeaturesGenerator:
 
         self.config = self.__load_config()
         self.__check_config()
+        self.__validate_option()
 
 
     def __load_config(self) -> dict:
@@ -219,7 +220,8 @@ class FeaturesGenerator:
 
             # чтобы использовать все столбцы
             index = df.index.name
-            df = df.reset_index()
+            if index != None:
+                df = df.reset_index()
 
             for feature in abs_time_config:
                 validate_json_values("name", feature, str)
@@ -247,7 +249,8 @@ class FeaturesGenerator:
                 
                 features_to_keep.append(feature["name"])
             # возвращаем индекс для датафрейма
-            df.set_index([index], inplace=True)
+            if index != None:
+                df.set_index([index], inplace=True)
 
             return df[features_to_keep]
         
@@ -272,7 +275,8 @@ class FeaturesGenerator:
             features_to_keep = []
             # чтобы использовать все столбцы
             index = df.index.name
-            df = df.reset_index()
+            if index != None:
+                df = df.reset_index()
             for feature in relative_time_config:
                 validate_json_values("name", feature, str)
                 validate_json_values("source", feature, str)
@@ -301,8 +305,17 @@ class FeaturesGenerator:
                 features_to_keep.append(feature["name"])
 
             # возвращаем индекс для датафрейма
-            df.set_index([index], inplace=True)
+            if index != None:
+                df.set_index([index], inplace=True)
             return df[features_to_keep]
+
+
+    def __validate_option(self) -> None:
+        """
+        Метод для проверки флага отброса NaN элементов после генерации признаков
+        """
+        validate_json_values("drop_na", self.config["options"], bool)
+        self.dropna = self.config["options"]["drop_na"]
 
 
     def generate_features(self, time_series: pd.DataFrame) -> pd.DataFrame:
@@ -322,4 +335,6 @@ class FeaturesGenerator:
         generated_features = generated_features.join(rolling_df, how='outer')
         generated_features = generated_features.join(abs_time_df, how='outer')
         generated_features = generated_features.join(relative_time_df, how='outer')
+        if self.dropna:
+            generated_features = generated_features.dropna()
         return generated_features

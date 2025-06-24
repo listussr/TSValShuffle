@@ -1,0 +1,14 @@
+{
+  "features": {
+    "relative_time": [
+      {
+        "name": "time_month",
+        "source": "date", 
+        "time_unit": "month"
+      }
+    ]
+  },
+  "options": {
+    "drop_na": true
+  }
+}
