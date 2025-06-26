@@ -74,7 +74,70 @@ class ScrollTimeSeriesSplitLoader:
         self.fold_num = 0
         
 
-class TimeSeriesSplitLoader:
+class ScrollTimeSeriesSplitLoader_:
+    def __init__(self, data: pd.DataFrame, n_splits: int, test_size: int = None):
+        self.data = data
+        self.data_size = data.shape[0]
+        self.n_splits = n_splits
+        self.__count_train_test_sizes(test_size)
+        self.fold_num = 0
+
+    def __count_train_test_sizes(self, test_size: int):
+        """
+        Подсчёт размеров обучающей и тестовой выборок
+
+        Args:
+            test_size_norm (float): Отношение размера тестовой выборки к размеру обучающей
+
+        Raises:
+            ValueError: Ошибка выхода за размер временного ряда
+            ValueError: Ошибка выбора коэффицента тестовой выборки
+        """
+        if test_size == None:
+            self.test_size = self.data_size // (self.n_splits + 1)
+            self.train_size = self.data_size - self.test_size * self.n_splits
+        else:
+            if test_size >= self.data_size or test_size <= 0:
+                raise ValueError(f"[test_size] must be in interval (0, {self.data_size})")
+            self.test_size = test_size
+            max_splits = (self.data_size - 1) // self.test_size
+            if max_splits < self.n_splits:
+                raise ValueError(f"[test_size]=({test_size}) is too high for [n_splits]=({self.n_splits}).\nIt turns {max_splits} split(s) as possible.\nDecrease [test_size] or [n_splits]")
+            self.train_size = self.data_size - self.test_size * self.n_splits
+
+    def get_current_fold(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Возвращает текущий фолд (обучающую и тестовую выборки)
+        
+        Returns:
+            tuple[pd.DataFrame, pd.DataFrame]: Обучающая и тестовая выборки
+        """
+        begin = self.test_size * self.fold_num
+        end = self.train_size + self.test_size * self.fold_num
+        train_df = self.data.iloc[begin:end]
+        test_end = min(end + self.test_size, self.data_size)
+        test_df = self.data.iloc[end:test_end]
+        
+        return train_df, test_df
+
+    def next_fold(self) -> bool:
+        """
+        Переход к следующему фолду
+        
+        Returns:
+            bool: True если переход успешен, False если достигнут конец выборки
+        """
+        if self.fold_num < self.n_splits - 1:
+            self.fold_num += 1
+            return True
+        return False
+    
+    def reset(self) -> None:
+        """Сбрасывает счетчик фолдов в начальное положение"""
+        self.fold_num = 0
+
+
+class ExpandingTimeSeriesSplitLoader:
 
     def __init__(self, data: pd.DataFrame, train_size: int, test_size_norm: float=0.8):
         """
@@ -135,7 +198,7 @@ class TimeSeriesSplitLoader:
         else:
             return False
         
-class TimeSeriesSplitLoader_:
+class ExpandingTimeSeriesSplitLoader_:
 
     def __init__(self, data: pd.DataFrame, n_splits: int, test_size: int = None):
         """
@@ -197,7 +260,7 @@ class TimeSeriesSplitLoader_:
         Returns:
             bool: Флаг достижения конца выборки. Если все фолды выборки использованы, возвращается False
         """
-        if self.fold_num < self.n_splits:
+        if self.fold_num < self.n_splits - 1:
             self.fold_num += 1
             return True
         else:

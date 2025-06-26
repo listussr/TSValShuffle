@@ -25,6 +25,10 @@ from custom_algorithms import (
     RollingMean,
     CatBoostRegressor_,
     FourierModel,
+    SimpleExpSmoothing_,
+    Holt_,
+    ExponentialSmoothing_,
+    SARIMAX_,
 )
 
 import pandas as pd
@@ -36,27 +40,28 @@ class ModelAdapter:
     """
     def __init__(self) -> None:
         self.__models = {
-            "Elastic Net": {"model": ElasticNet, "shuffle": True},
-            "Huber": {"model": HuberRegressor, "shuffle": True},
-            "Lasso": {"model": Lasso, "shuffle": True},
+            "Elastic Net": {"model": ElasticNet, "shuffle": True, "fit_type": 'sklearn'},
+            "Huber": {"model": HuberRegressor, "shuffle": True, "fit_type": 'sklearn'},
+            "Lasso": {"model": Lasso, "shuffle": True, "fit_type": 'sklearn'},
             #"Polynomial": 
-            "RANSAC": {"model": RANSACRegressor, "shuffle": True},
-            "Ridge": {"model": Ridge, "shuffle": True},
-            "TheilSen": {"model": TheilSenRegressor, "shuffle": True},
-            "Random Forest": {"model": RandomForestRegressor, "shuffle": True},
-            "Exponential Smoothing": {"model": SimpleExpSmoothing, "shuffle": False},
-            "Holt": {"model": Holt, "shuffle": False},
-            "Holt Winters": {"model": ExponentialSmoothing, "shuffle": False},
-            "SARIMA": {"model": SARIMAX, "shuffle": False},
-            "catboost": {"model": CatBoostRegressor_, "shuffle": True},
-            "Prophet": {"model": Prophet, "shuffle": True},
-            "ConstPrediction": {"model": ConstPrediction, "shuffle": True},
-            "CrostonTSB": {"model": CrostonTSB, "shuffle": False},
-            "RollingMean": {"model": RollingMean, "shuffle": True},
-            "Fourie": {"model": FourierModel, "shuffle": False},
+            "RANSAC": {"model": RANSACRegressor, "shuffle": True, "fit_type": 'sklearn'},
+            "Ridge": {"model": Ridge, "shuffle": True, "fit_type": 'sklearn'},
+            "TheilSen": {"model": TheilSenRegressor, "shuffle": True, "fit_type": 'sklearn'},
+            "Random Forest": {"model": RandomForestRegressor, "shuffle": True, "fit_type": 'sklearn'},
+            "Exponential Smoothing": {"model": SimpleExpSmoothing_, "shuffle": False, "fit_type": 'statsmodels'},
+            "Holt": {"model": Holt_, "shuffle": False, "fit_type": 'statsmodels'},
+            "Holt Winters": {"model": ExponentialSmoothing_, "shuffle": False, "fit_type": 'statsmodels'},
+            "SARIMA": {"model": SARIMAX_, "shuffle": False, "fit_type": 'sarimax'},
+            "catboost": {"model": CatBoostRegressor_, "shuffle": True, "fit_type": 'sklearn'},
+            "Prophet": {"model": Prophet, "shuffle": True, "fit_type": 'prophet'},
+            "ConstPrediction": {"model": ConstPrediction, "shuffle": True, "fit_type": 'sklearn_like'},
+            "CrostonTSB": {"model": CrostonTSB, "shuffle": False, "fit_type": 'croston'},
+            "RollingMean": {"model": RollingMean, "shuffle": True, "fit_type": 'sklearn_like'},
+            "Fourie": {"model": FourierModel, "shuffle": False, "fit_type": 'sklearn'},
         }
 
         self.model = None
+        self.adapter_config = None
 
 
     def __load_model(self, model_name: str, kwargs: dict) -> None:
@@ -73,6 +78,7 @@ class ModelAdapter:
         if not model_name in self.__models.keys():
             raise KeyError(f"Incorrect algorithm name ({model_name}). Required:\n{self.__models}")
         model_class = self.__models[model_name]["model"]
+        self.adapter_config = self.__models[model_name]
         self.model = model_class(**kwargs)
 
     def set_model(self, model_name: str, kwargs: dict) -> None:
@@ -86,18 +92,19 @@ class ModelAdapter:
         self.__load_model(model_name, kwargs)
 
 
-    def add_regressor(self, kwargs: dict):
+    def add_regressor(self, feature_name: str, kwargs: dict):
         """
         Метод для упрощения использования метода add_regressor() у модели
 
         Args:
+            feature_name (str): Название параметра
             kwargs (dict): Словарь с параметрами
 
         Raises:
             TypeError: Ошибка отстутствия у класса модели данного метода
         """
         if hasattr(self.model, "add_regressor"):
-            self.model.add_regressor(**kwargs)
+            self.model.add_regressor(feature_name, **kwargs)
         else:
             raise TypeError(f"Model class {self.model.__class__} does not have method [add_regressor()]")
 
@@ -193,8 +200,17 @@ class ModelAdapter:
             raise TypeError(f"Model class {self.model.__class__} does not have method [forecast()]")
 
     def get_forecast(self, kwargs: dict):
+        """
+        Метод для обобщения предсказания на несколько классов моделей
+
+        Args:
+            kwargs (dict): Словарь с данными для предсказаяния
+
+        Returns:
+            pd.DataFrame: Датафрейм с результатами предсказания
+        """
         if hasattr(self.model, "get_forecast"):
-            return self.model.get_forecast(**kwargs)
+            return self.model.get_forecast(**kwargs)[0].to_frame()
         else:
             raise TypeError(f"Model class {self.model.__class__} does not have method [get_forecast()]")
 
@@ -224,7 +240,7 @@ class ModelAdapter:
         elif isinstance(prediction, tuple):
             prediction = prediction[0].to_frame(name='prediction')
         else:
-            prediction = prediction.rename({'yhat':'prediction'})
+            prediction = prediction.rename(columns={'yhat':'prediction'})
         return prediction
 
          

@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 from ts_split import (
     ScrollTimeSeriesSplitLoader, 
-    TimeSeriesSplitLoader_,
+    ExpandingTimeSeriesSplitLoader_,
+    ExpandingTimeSeriesSplitLoader,
+    ScrollTimeSeriesSplitLoader_
 )
 
 from sklearn.linear_model import LinearRegression
@@ -14,6 +16,7 @@ from algorithm_loader import ModelAdapter
 
 import matplotlib.pyplot as plt
 
+from validate import Validator
 
 """stss = ScrollTimeSeriesSplitLoader(df, 40, 0.5, 0.5)
 fold, _ = stss.get_current_fold()
@@ -51,6 +54,7 @@ print(tss_.head())
 print(tss_fold.shape)
 print(tss_.shape)"""
 
+# const
 """params = {
     "n_predict": 10,
     "type": "Median"
@@ -60,6 +64,7 @@ adapter.fit({})
 pred = adapter.predict({"ts":train})
 print(pred.tail(10))"""
 
+# rolling mean
 """params = {
     "time_step": 1,
     "n_predict": 20,
@@ -79,6 +84,7 @@ print(data[80:100])
 print(pred.tail(20))
 print(WAPE(pd.Series(pred.iloc[80:100, -1]), pd.Series(data[80:100])))"""
 
+# croston
 """params = {
     "alpha": 0.2,
     "beta": 0.8,
@@ -557,3 +563,103 @@ plt.title('Аппроксимация временного ряда с помо�
 plt.legend()
 plt.show()"""
 
+df = pd.read_csv(r"src\ts_val_shuffle\Electric_Production.csv")
+
+df = df.rename(columns={"IPG2211A2N": "value", "DATE": "date"})
+
+df['date'] = pd.to_datetime(df['date'])
+print(df.head())
+
+init_params = {
+    "alpha": 0.1,
+    "l1_ratio": 0.5,
+    "max_iter": 1000,
+    "random_state": 42,
+}
+
+val = Validator()
+train = df.iloc[:-30]
+test = df.iloc[-30:]
+val.set_data(train)
+
+init_params = {
+    #'endog': df,
+    "order": (1, 1, 1),
+    "seasonal_order": (1, 1, 1, 12),
+    "trend": "t",
+    "enforce_stationarity": False,
+    "enforce_invertibility": False,
+}
+
+init_params = {
+    "growth": "linear",
+    "seasonality_mode": "multiplicative",
+    "yearly_seasonality": True,
+    "weekly_seasonality": False,
+    "daily_seasonality": False,
+}
+
+init_params = {
+    "iterations": 1000,
+    "learning_rate": 0.1,
+    "depth": 6,
+    "random_seed": 42,
+    "verbose": False,
+}
+
+init_params = {
+    #'endog': ts,
+    "initialization_method": "estimated",
+    "trend": "add",
+    "seasonal": "add",
+    "seasonal_periods": 12,
+}
+
+init_params = {
+    "order": 5, # обязательный параметр
+    #"absolute_sigma": True, # опционально
+}
+
+init_params = {
+    "n_predict": 10,
+    "type": "Median"
+}
+
+init_params = {
+    "time_step": 1,
+    "window_size": 3,
+    "weights_coeffs": [],
+    "weights_type": "new",
+}
+
+init_params = {
+    "alpha": 0.15,
+    "beta": 0.95,
+    "time_step": "MS",
+}
+
+val.set_generator(r"src/ts_val_shuffle/config.json")
+#val.set_model("Elastic Net", init_params)
+#val.set_model("SARIMA", init_params)
+#val.set_model("Prophet", init_params)
+#val.set_model("catboost", init_params)
+#val.set_model("Holt Winters", init_params)
+#val.set_model("Fourie", init_params)
+#val.set_model("ConstPrediction", init_params)
+#val.set_model("RollingMean", init_params)
+
+val.set_model("CrostonTSB", init_params)
+
+
+val.set_split_method("expanding", 10)
+val.validate("WAPE", 'value', 'date', shuffling=False)
+
+
+print(val.metric_values)
+
+print(test['value'])
+print(test['date'])
+pred = val.predict({'X': test['date']})
+print(pred)
+plt.plot(val.metric_values)
+plt.show()

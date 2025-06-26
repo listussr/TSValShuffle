@@ -49,6 +49,7 @@ def MAPE(y_pred: pd.Series, y_true: pd.Series):
     Returns:
         float: Значение метрики
     """
+    y_pred, y_true = y_pred.values, y_true.values
     n = y_pred.shape[0]
     numerator = np.abs(y_pred - y_true)
     denominator = np.abs(y_true)
@@ -66,6 +67,7 @@ def SMAPE(y_pred: pd.Series, y_true: pd.Series) -> float:
     Returns:
         float: Значение метрики
     """
+    y_pred, y_true = y_pred.values, y_true.values
     n = y_pred.shape[0]
     numerator = 2 * np.abs(y_pred - y_true)
     denominator = y_true + y_pred
@@ -83,6 +85,7 @@ def WAPE(y_pred: pd.Series, y_true: pd.Series) -> float:
     Returns:
         float: Значение метрики
     """
+    y_pred, y_true = y_pred.values, y_true.values
     numerator = np.sum(np.abs(y_pred - y_true))
     denominator = np.sum(np.abs(y_true))
     return numerator / denominator
