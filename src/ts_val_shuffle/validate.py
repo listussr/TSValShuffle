@@ -127,6 +127,7 @@ class Validator:
         elif fit_config == 'sarimax':
             # dataframe для дополнительных признаков кроме исходного ряда
             train = train.set_index(time_feature)
+            #train = train.drop(columns=[time_feature])
             endog = train[target_feature]
             exog = train.drop(columns=[target_feature])
             return {'endog': endog, 'exog': exog}            
@@ -137,7 +138,7 @@ class Validator:
         elif fit_config == 'croston':
             X = train[time_feature]
             y = train[target_feature]
-            return {"X": X, 'y': y}
+            return {"timestamps": X, 'ts': y}
         else:
             return {"X": train[target_feature]}
 
@@ -156,9 +157,7 @@ class Validator:
         fit_config = self.adapter.adapter_config["fit_type"]
         if fit_config == 'sklearn' or fit_config == 'sklearn_like':
             # вариант для sklearn и catboost
-            if time_feature in test.columns.to_list():
-                test = test.drop(columns=[time_feature])
-            test = test.drop(columns=[target_feature])
+            test = test.drop(columns=[target_feature, time_feature])
             predict_params = {'X': test}
             result = self.adapter.predict(predict_params)['prediction']
         elif fit_config == 'statsmodels':
@@ -199,7 +198,7 @@ class Validator:
             result = result['prediction']
         elif fit_config == 'croston':
             predict_params = {
-                'X': test[time_feature],
+                'n_predict': len(test[time_feature]),
             }
             result = self.adapter.predict(predict_params)['prediction']
         return result
@@ -261,7 +260,7 @@ class Validator:
 
             self.metric_values.append(self.metric(prediction, test[target_feature]))
             learning_flag = self.split_handler.next_fold()
-            # косталь для prophet
+            # костыль для prophet
             if self.adapter.adapter_config['fit_type'] == 'prophet':
                 self.set_model("Prophet", self.init_params)
 

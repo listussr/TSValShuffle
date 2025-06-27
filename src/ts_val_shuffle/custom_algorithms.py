@@ -23,71 +23,110 @@ from sympy import Expr
 
 class CrostonTSB:
     """
-    Метод Кростона
+    Класс для прогноза методом Кростона TSB с интерфейсом, похожим на sklearn.
     """
-    def __init__(self, alpha: float, beta: float, time_step: str, n_predict: int=None, sample: pd.DataFrame=None) -> None:
+
+    def __init__(self, alpha: float = 0.1, beta: float = 0.1, n_predict: int = 1, time_step: str = 'D'):
         """
-        :param alpha: Параметр сглаживания для уровня;
-        :param beta: Параметр сглаживания для вероятности;
-        :param n_predict: Количество предсказаний;
-        :param time_step: Шаг прогноза;
-        :param sample: Датафрейм с признаками (не используется);
+        Инициализация параметров модели.
+        :param alpha: Параметр сглаживания для уровня (среднего спроса).
+        :param beta: Параметр сглаживания для вероятности ненулевого спроса.
+        :param n_predict: Количество точек прогноза.
+        :param time_step: Шаг временного ряда для прогноза (например, 'D', 'W', 'M').
         """
         self.alpha = alpha
         self.beta = beta
         self.n_predict = n_predict
         self.time_step = time_step
-        self.sample = sample
+        self.fitted_ = False
+        self.seasonality_ = None
+        self.timestamps_res_ = None
+        self.last_level_ = None
+        self.last_prob_ = None
+        self.last_forecast_ = None
 
-
-    def fit(self, X, y=None):
+    def fit(self, timestamps: pd.Series, ts: pd.Series):
         """
-        X: pd.Series или массив с временными метками или индексами
-        y: pd.Series или массив с временным рядом (целевая переменная)
-        Если y не задан, предполагается, что X — это временной ряд.
+        Обучение модели методом Кростона TSB.
+        :param timestamps: Временные метки (pd.Series с типом datetime).
+        :param ts: Временной ряд (pd.Series с числовыми значениями).
+        :param sample: Дополнительные признаки (не используются, для совместимости).
+        :return: self
         """
-        if y is None:
-            y = X
-            self.timestamps_ = None
-        else:
-            self.timestamps_ = pd.Series(X).copy()
+        d = np.array(ts)
+        cols = len(d)
+        d = np.append(d, [np.nan] * self.n_predict)
 
-        self.ts_ = pd.Series(y).copy()
-        self.is_fitted_ = True
+        a, p, f = np.full((3, cols + self.n_predict + 1), np.nan)
+
+        first_occurrence = np.argmax(d[:cols] > 0)
+        a[0] = d[first_occurrence]
+        p[0] = 1 / (1 + first_occurrence)
+        f[0] = p[0] * a[0]
+
+        for t in range(cols):
+            if d[t] > 0:
+                a[t + 1] = self.alpha * d[t] + (1 - self.alpha) * a[t]
+                p[t + 1] = self.beta * 1 + (1 - self.beta) * p[t]
+            else:
+                a[t + 1] = a[t]
+                p[t + 1] = (1 - self.beta) * p[t]
+            f[t + 1] = p[t + 1] * a[t + 1]
+
+        a[cols + 1:cols + self.n_predict + 1] = a[cols]
+        p[cols + 1:cols + self.n_predict + 1] = p[cols]
+        f[cols + 1:cols + self.n_predict + 1] = f[cols]
+
+        ts_res = pd.Series(index=range(cols + self.n_predict), dtype='float64')
+        ts_res.loc[ts_res.index] = f[1:]
+
+        timestamps_res = pd.date_range(start=timestamps.iloc[0], freq=self.time_step, periods=len(ts_res))
+        dict_seasonality, marks_res = self._seasonal_coefficients(ts, timestamps, self.time_step, timestamps_res)
+
+        df = pd.DataFrame({'y_pred': ts_res, 'indexes': marks_res})
+        df.loc[cols + 1:cols + self.n_predict + 1, 'y_pred'] = df.loc[cols + 1:cols + self.n_predict + 1].apply(
+            lambda x: x.y_pred * dict_seasonality.get(x.indexes, 1), axis=1)
+
+        self.fitted_ = True
+        self.seasonality_ = dict_seasonality
+        self.timestamps_res_ = timestamps_res
+        self.last_level_ = a[cols]
+        self.last_prob_ = p[cols]
+        self.last_forecast_ = f[cols]
+
+        self.prediction_ = df.y_pred.reset_index(drop=True)
         return self
 
-    def predict(self, X=None):
+    def predict(self, n_predict: int = None):
         """
-        X: необязательный параметр — временные метки для прогноза.
-        Если не задан, прогноз строится на self.n_predict шагов.
+        Прогнозирование на n_predict точек вперед.
+        :param n_predict: Количество точек прогноза. Если None, используется n_predict из fit.
+        :return: pd.Series с прогнозом
         """
-        if not self.is_fitted_:
-            raise RuntimeError("You must fit the model before prediction")
+        if not self.fitted_:
+            raise RuntimeError("Model must be fitted before prediction")
 
-        ts = self.ts_
-        if X is not None:
-            timestamps = pd.Series(X)
-            n_predict = len(timestamps)
-        else:
-            timestamps = pd.date_range(start=pd.Timestamp.now(), freq=self.time_step, periods=self.n_predict)
+        if n_predict is None:
             n_predict = self.n_predict
 
-        return self._croston_predict(ts, timestamps, n_predict)
+        forecast = np.full(n_predict, np.nan)
+        for i in range(n_predict):
+            base_forecast = self.last_prob_ * self.last_level_
+            idx = self.timestamps_res_[len(self.timestamps_res_) - n_predict + i]
+            season_idx = self._get_season_index(idx)
+            season_coeff = self.seasonality_.get(season_idx, 1)
+            forecast[i] = base_forecast * season_coeff
 
+        return pd.Series(forecast)
 
-    def __seasonal_coefficients(self, ts: pd.Series, timestamps: pd.Series, timestamps_res: pd.DatetimeIndex) -> tuple[dict, pd.Series]:
+    def _seasonal_coefficients(self, ts: pd.Series, timestamps: pd.Series, time_step: str, timestamps_res: pd.DatetimeIndex):
         """
         Вычисление сезонных коэффициентов на основе ряда.
-        :param ts: Временной ряд;
-        :param timestamps: Метка времени;
-        :param time_step: Шаг времени;
-        :param timestamps_res: Временные метки, для которых нужно получить коэффициенты
-        :return: Словарь с сезонными коэффициентами, временные метки
         """
         mean_sales = np.mean(ts.values)
         marks_res = None
         marks = None
-        match self.time_step:
+        match time_step:
             case 'YS':
                 marks = timestamps.dt.year
                 marks_res = timestamps_res.year
@@ -105,46 +144,36 @@ class CrostonTSB:
             case 'D':
                 marks = timestamps.dt.dayofweek
                 marks_res = timestamps_res.dayofweek
+            case _:
+                marks = pd.Series([0]*len(timestamps))
+                marks_res = pd.Series([0]*len(timestamps_res))
+
         dict_seasonality = {}
         df = pd.DataFrame({'ds': marks, 'y': ts})
         for timestamp in marks.unique():
             values = df[df.ds == timestamp].y
-            dict_seasonality[timestamp] = np.mean(values / mean_sales)
+            dict_seasonality[timestamp] = np.mean(values / mean_sales) if mean_sales != 0 else 1
         for timestamp in set(marks_res.unique()) - set(marks.unique()):
             dict_seasonality[timestamp] = dict_seasonality.get(timestamp, 1)
         return dict_seasonality, marks_res
 
-
-    def _croston_predict(self, ts: pd.Series, timestamps: pd.Series, n_predict: int) -> tuple[pd.Series, dict]:
-        d = np.array(ts)
-        cols = len(d)
-        d = np.append(d, [np.nan] * n_predict)
-
-        a, p, f = np.full((3, cols + n_predict + 1), np.nan)
-
-        first_occurrence = np.argmax(d[:cols] > 0)
-        a[0] = d[first_occurrence]
-        p[0] = 1 / (1 + first_occurrence)
-        f[0] = p[0] * a[0]
-
-        for t in range(cols):
-            if d[t] > 0:
-                a[t + 1] = self.alpha * d[t] + (1 - self.alpha) * a[t]
-                p[t + 1] = self.beta * 1 + (1 - self.beta) * p[t]
-            else:
-                a[t + 1] = a[t]
-                p[t + 1] = (1 - self.beta) * p[t]
-            f[t + 1] = p[t + 1] * a[t + 1]
-
-        a[cols + 1:cols + n_predict + 1] = a[cols]
-        p[cols + 1:cols + n_predict + 1] = p[cols]
-        f[cols + 1:cols + n_predict + 1] = f[cols]
-
-        ts_res = pd.Series(f[1:cols + n_predict + 1], index=pd.RangeIndex(start=0, stop=cols + n_predict))
-        ts_res.index = pd.date_range(start=timestamps.iloc[0], freq=self.time_step, periods=len(ts_res))
-
-        return ts_res.iloc[-n_predict:], {}
-
+    def _get_season_index(self, timestamp: pd.Timestamp):
+        """
+        Получить индекс сезонности для заданной временной метки.
+        """
+        match self.time_step:
+            case 'YS':
+                return timestamp.year
+            case 'QS':
+                return timestamp.quarter
+            case 'MS':
+                return timestamp.month
+            case 'W' | 'W-MON':
+                return (timestamp.day - 1 + (timestamp - pd.to_timedelta(timestamp.day - 1, unit='d')).dayofweek) // 7 + 1
+            case 'D':
+                return timestamp.dayofweek
+            case _:
+                return 0
 
 class RollingMean:
     def __init__(self, time_step: str, window_size: int,

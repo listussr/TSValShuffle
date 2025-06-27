@@ -570,27 +570,16 @@ df = df.rename(columns={"IPG2211A2N": "value", "DATE": "date"})
 df['date'] = pd.to_datetime(df['date'])
 print(df.head())
 
-init_params = {
-    "alpha": 0.1,
-    "l1_ratio": 0.5,
-    "max_iter": 1000,
-    "random_state": 42,
-}
+
 
 val = Validator()
 train = df.iloc[:-30]
 test = df.iloc[-30:]
 val.set_data(train)
 
-init_params = {
-    #'endog': df,
-    "order": (1, 1, 1),
-    "seasonal_order": (1, 1, 1, 12),
-    "trend": "t",
-    "enforce_stationarity": False,
-    "enforce_invertibility": False,
-}
 
+
+# Prophet
 init_params = {
     "growth": "linear",
     "seasonality_mode": "multiplicative",
@@ -599,6 +588,7 @@ init_params = {
     "daily_seasonality": False,
 }
 
+#catboost
 init_params = {
     "iterations": 1000,
     "learning_rate": 0.1,
@@ -607,6 +597,7 @@ init_params = {
     "verbose": False,
 }
 
+# Holt W
 init_params = {
     #'endog': ts,
     "initialization_method": "estimated",
@@ -615,16 +606,19 @@ init_params = {
     "seasonal_periods": 12,
 }
 
+# Fourie
 init_params = {
     "order": 5, # обязательный параметр
     #"absolute_sigma": True, # опционально
 }
 
+#Const
 init_params = {
     "n_predict": 10,
     "type": "Median"
 }
 
+# Moving Average
 init_params = {
     "time_step": 1,
     "window_size": 3,
@@ -632,34 +626,70 @@ init_params = {
     "weights_type": "new",
 }
 
+# Croston
 init_params = {
     "alpha": 0.15,
     "beta": 0.95,
     "time_step": "MS",
 }
 
+# Elastic
+init_params = {
+    "alpha": 0.1,
+    "l1_ratio": 0.5,
+    "max_iter": 1000,
+    "random_state": 42,
+}
+
+# sarima
+init_params = {
+    "order": (1, 1, 1),
+    "seasonal_order": (1, 1, 1, 12),
+    "trend": "t",
+    "enforce_stationarity": False,
+    "enforce_invertibility": False,
+}
+
 val.set_generator(r"src/ts_val_shuffle/config.json")
 #val.set_model("Elastic Net", init_params)
-#val.set_model("SARIMA", init_params)
+val.set_model("SARIMA", init_params)
 #val.set_model("Prophet", init_params)
 #val.set_model("catboost", init_params)
 #val.set_model("Holt Winters", init_params)
 #val.set_model("Fourie", init_params)
 #val.set_model("ConstPrediction", init_params)
 #val.set_model("RollingMean", init_params)
+#val.set_model("CrostonTSB", init_params)
 
-val.set_model("CrostonTSB", init_params)
 
-
-val.set_split_method("expanding", 10)
+val.set_split_method("rolling", 10)
 val.validate("WAPE", 'value', 'date', shuffling=False)
 
 
 print(val.metric_values)
+print(df.shape)
+test = df.iloc[-74:]
 
-print(test['value'])
-print(test['date'])
-pred = val.predict({'X': test['date']})
+gen = FeaturesGenerator(r"src/ts_val_shuffle/config.json")
+test = gen.generate_features(test)
+
+print(test.head())
+
+test = test.set_index('date')
+exog = test.drop(columns=['value'])
+predict_params = {
+                'start': test.index[0],
+                'end': test.index[-1],
+                'exog': exog,
+}
+print(test.index[0])
+print(test.index[-1])
+pred = val.predict(predict_params)
+plt.plot(np.arange(0, 30), pred['prediction'].values[-30:], label='График 1')
+plt.plot(np.arange(0, 30), test['value'][-30:], label='График 2')
+plt.legend()
+plt.show()
 print(pred)
+print(WAPE(pred['prediction'][-30:], test['value'][-30:]))
 plt.plot(val.metric_values)
 plt.show()
