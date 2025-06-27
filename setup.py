@@ -1,0 +1,47 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="ts_val_shuffle",
+    version="0.1.0",
+    author="Vsevolod Afanasiev",
+    author_email="listussr85@gmail.com",
+    description="Package for time series validation and feature shuffling",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    python_requires=">=3.8",
+    install_requires=[
+        "contourpy==1.3.2",
+        "cycler==0.12.1",
+        "fonttools==4.58.4",
+        "joblib==1.5.1",
+        "kiwisolver==1.4.8",
+        "matplotlib==3.10.3",
+        "numpy>=1.16.0,<3.0.0",
+        "packaging==25.0",
+        "pandas==2.3.0",
+        "pillow==11.2.1",
+        "pyparsing==3.2.3",
+        "python-dateutil==2.9.0.post0",
+        "pytz==2025.2",
+        "scikit-learn==1.7.0",
+        "scipy==1.15.3",
+        "six==1.17.0",
+        "threadpoolctl==3.6.0",
+        "tzdata==2025.2",
+        "symfit==0.5.6",
+        "statsmodels==0.14.4",
+        "catboost==1.2.7",
+        "prophet==1.1.6"
+    ],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+    ],
+    keywords="time-series validation machine-learning",
+    project_urls={
+        "Source": "https://github.com/listussr/ts_val_shuffle",
+    },
+)
