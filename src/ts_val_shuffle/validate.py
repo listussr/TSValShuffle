@@ -284,11 +284,6 @@ class Validator:
                 'exog': exog,
             }
             result = self.adapter.predict(predict_params)
-            #print("exog.shape: ", exog.shape)
-            #print(exog.head())
-            #print(f"start: {predict_params['start']}, end: {predict_params['end']}")
-            #print("result.shape: ", result.shape)
-            #print(result.head())
             result = result['prediction']
         elif fit_config == 'prophet':
             # для Prophet
@@ -350,7 +345,7 @@ class Validator:
             RuntimeError: Ошибка отсутствия метода для валидации
             KeyError: Ошибка неправильного указания метрики
         """
-        if self.generated_ts.empty or self.generated_ts is None:
+        if self.generated_ts is None or self.generated_ts.empty:
             raise RuntimeError(f"Field [generated_ts] is None. Call [set_generator()] beafore calling [validate()]")
         if self.adapter.adapter_config == None:
             raise RuntimeError(f"Field [adapter] is None. Call [set_model()] beafore calling [validate()]")
@@ -360,7 +355,7 @@ class Validator:
         # если индексовый столбец с датами, то делаем его простым столбцом       
         if time_feature not in self.generated_ts.columns.to_list():
             self.generated_ts = self.generated_ts.reset_index(drop=False)
-            self.generated_ts = self.generated_ts.rename(columns={self.generated_ts.columns[0], time_feature})
+            self.generated_ts = self.generated_ts.rename(columns={self.generated_ts.columns[0]: time_feature})
 
         self.metric = self.__metric_dict[metric]
         if self.metric == None:

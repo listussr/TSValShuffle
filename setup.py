@@ -42,6 +42,6 @@ setup(
     ],
     keywords="time-series validation machine-learning",
     project_urls={
-        "Source": "https://github.com/listussr/ts_val_shuffle",
+        "Source": "https://github.com/listussr/TSValShuffle",
     },
 )
