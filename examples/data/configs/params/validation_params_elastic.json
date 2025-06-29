@@ -1,0 +1,24 @@
+{
+  "init_params": {
+    "model_name": "Elastic Net",
+    "params": {
+      "alpha": 0.1,
+      "l1_ratio": 0.5,
+      "max_iter": 1000,
+      "random_state": 42
+    }
+  },
+  "split_params": {
+    "method": "expanding",
+    "n_splits": 14,
+    "test_size": 24
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": true,
+    "extra_fit_params": {},
+    "add_feature_params": {}
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "init_params": {
+    "model_name": "Prophet",
+    "params": {
+      "growth": "linear",
+      "seasonality_mode": "multiplicative",
+      "yearly_seasonality": true,
+      "weekly_seasonality": false,
+      "daily_seasonality": false
+  }
+  },
+  "split_params": {
+    "method": "expanding",
+    "n_splits": 10
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": false
+  }
+}

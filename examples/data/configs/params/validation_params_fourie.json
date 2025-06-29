@@ -1,0 +1,18 @@
+{
+  "init_params": {
+    "model_name": "Fourie",
+    "params": {
+      "order": 5
+    }
+  },
+  "split_params": {
+    "method": "rolling",
+    "n_splits": 10
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": false
+  }
+}

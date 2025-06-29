@@ -1,4 +1,4 @@
-from features_generation import FeaturesGenerator
+from .features_generation import FeaturesGenerator
 import pandas as pd
 import numpy as np
 from .ts_split import (
@@ -401,7 +401,28 @@ plot_comp = adapter.plot_components(pred, plot_params)
 print(test_df['y'])
 print(pred['yhat'].iloc[-20:])
 print(WAPE(pred['yhat'].iloc[-20:], pd.Series(test_df['y'][-20:])))
-plt.show()"""
+plt.show()
+
+df = pd.read_csv(r"src\ts_val_shuffle\Electric_Production.csv")
+
+df = df.rename(columns={"IPG2211A2N": "value", "DATE": "date"})
+print(df.head())
+
+df['date'] = pd.to_datetime(df['date'])
+
+gen = FeaturesGenerator(r"src/ts_val_shuffle/config.json")
+new = gen.generate_features(df)
+
+new = new.drop(columns=['date'])
+
+X = new.drop(columns=['value'])
+y = new['value']
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+adapter = _ModelAdapter()
+"""
 
 # Prophet + features
 """df = pd.read_csv(r"src\ts_val_shuffle\Electric_Production.csv")
@@ -409,7 +430,7 @@ plt.show()"""
 df = df.rename(columns={"IPG2211A2N": "y", "DATE": "ds"})
 print(df.head())
 
-df['ds'] = pd.to_datetime(df['ds'], freq='MS')
+df['ds'] = pd.to_datetime(df['ds'])
 
 gen = FeaturesGenerator(r"src/ts_val_shuffle/config copy.json")
 new = gen.generate_features(df)
@@ -431,7 +452,7 @@ init_params = {
 adapter.set_model("Prophet", init_params)
 
 for feat in features:
-    adapter.model.add_regressor(feat)
+    adapter.add_regressor(feat, {})
 
 fit_params = {
     "df": train_df,
@@ -439,28 +460,41 @@ fit_params = {
 adapter.fit(fit_params)
 
 mfd_params = {
-    "periods": 20,
+    "periods": 40,
     "freq": 'MS'
 }
 
 future = adapter.make_future_dataframe(mfd_params)
 
+print("==============================\n")
+print(test_df.head())
+
 for feat in features:
-    future[feat] = train_df[feat].iloc[-1]
+    future[feat] = test_df[feat]
+
+future = future[-28:-8]
+
+print("=====================================================\nfuture")
+print(future.shape, '\n')
+print(future)
 
 predict_params = {
     "df": future
 }
+
 pred = adapter.predict(predict_params)
 plot_params = {
     'figsize': (8, 6)
 }
-plot = adapter.plot(pred, plot_params)
-plot_comp = adapter.plot_components(pred, plot_params)
+print(pred.head())
+#plot = adapter.plot(pred, plot_params)
+#plot_comp = adapter.plot_components(pred, plot_params)
 print(test_df['y'])
-print(pred['yhat'].iloc[-20:])
-print(WAPE(pred['yhat'].iloc[-20:], pd.Series(test_df['y'][-20:])))
+print(pred['prediction'].iloc[-20:])
+print(WAPE(pred['prediction'].iloc[-20:], pd.Series(test_df['y'][-20:])))
 plt.show()"""
+
+
 
 # SARIMAX
 """df = pd.read_csv(r"src\ts_val_shuffle\Electric_Production.csv")
@@ -740,3 +774,55 @@ result = val.predict(predict_params)
 print("result.shape: ", result.shape)
 print(result.head())
 result = result['prediction']"""
+
+df = pd.read_csv(r"src\ts_val_shuffle\Electric_Production.csv")
+
+df = df.rename(columns={"IPG2211A2N": "y", "DATE": "ds"})
+print(df.head())
+
+df['ds'] = pd.to_datetime(df['ds'])
+
+train_df = df[:-20]
+
+gen = FeaturesGenerator(r"src/ts_val_shuffle/config copy.json")
+new = gen.generate_features(df)
+
+
+features = new.drop(columns=['y', 'ds']).columns.to_list()
+
+test_df = new.iloc[-20:]
+
+val = Validator()
+val.set_data(train_df)
+val.set_generator(r"src\ts_val_shuffle\config copy.json")
+val.load_params(r"src\ts_val_shuffle\validation_params_prophet.json")
+val.validate()
+
+mfd_params = {
+    "periods": 20 + val.split_handler.test_size,
+    "freq": 'MS',
+    "include_history": False
+}
+
+future = val.adapter.make_future_dataframe(mfd_params)
+print(future.shape)
+future = future[-20:]
+
+for feature in features:
+    future[feature] = test_df[feature].values
+
+
+print("=====================================================\nfuture")
+print(future)
+
+print(test_df.tail())
+
+predict_params = {
+    "df": future,
+}
+
+pred = val.predict(predict_params)
+print(test_df['y'])
+print(pred['prediction'].iloc[-20:])
+print(WAPE(pred['prediction'].iloc[-20:], pd.Series(test_df['y'][-20:])))
+plt.show()

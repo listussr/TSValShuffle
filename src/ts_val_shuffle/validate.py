@@ -108,6 +108,12 @@ class Validator:
         _validate_json_keys({"model_name": str, "params": dict}, self.__init_params)
         _validate_json_values("model_name", self.__init_params, str)
         _validate_json_values("params", self.__init_params, dict)
+        order = self.__init_params["params"].get("order", None)
+        seasonal_order = self.__init_params["params"].get("seasonal_order", None)
+        if order != None:
+            self.__init_params["params"]["order"] = tuple(order)
+        if seasonal_order != None:
+            self.__init_params["params"]["seasonal_order"] = tuple(seasonal_order)
 
     def __validate_split_params(self) -> None:
         """
@@ -210,7 +216,6 @@ class Validator:
         """
         fit_config = self.adapter.adapter_config["fit_type"]
         if shuffling:
-            print("shuffling")
             train = train.sample(frac=1).reset_index(drop=True)
         if fit_config == 'sklearn':
             # вариант для sklearn и catboost
@@ -279,11 +284,11 @@ class Validator:
                 'exog': exog,
             }
             result = self.adapter.predict(predict_params)
-            print("exog.shape: ", exog.shape)
-            print(exog.head())
-            print(f"start: {predict_params['start']}, end: {predict_params['end']}")
-            print("result.shape: ", result.shape)
-            print(result.head())
+            #print("exog.shape: ", exog.shape)
+            #print(exog.head())
+            #print(f"start: {predict_params['start']}, end: {predict_params['end']}")
+            #print("result.shape: ", result.shape)
+            #print(result.head())
             result = result['prediction']
         elif fit_config == 'prophet':
             # для Prophet
@@ -369,7 +374,7 @@ class Validator:
         while learning_flag:
             # костыль для prophet
             if self.adapter.adapter_config['fit_type'] == 'prophet':
-                self.set_model("Prophet", self.__init_params)
+                self.__set_model("Prophet", self.__init_params)
             train, test = self.split_handler.get_current_fold()
             fit_data = self.__form_fit_data(train, target_feature, time_feature, shuffling and self.adapter.adapter_config['shuffle'])
             fit_params = {**fit_data, **extra_fit_params}

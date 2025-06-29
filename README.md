@@ -28,8 +28,11 @@ ___
 ### Примеры использования модуля:
 #### [1. Elastic Net](examples/Example_ElasticNet.ipynb),
 #### [2. Holt Winters](examples/Example_ExpSmoothing.ipynb),
-#### [3. Catboost](examples/Example_Catboost.ipynb),
-#### [4. Prophet](examples/Example_Prophet.ipynb),
-#### [5. Fourie](examples/Example_Fourie.ipynb),
-#### [6. CrostonTSB](examples/Example_Croston.ipynb).
+#### [3. Polynomial Regression](examples/Example_PolinomialRegression.ipynb)
+#### [4. Catboost](examples/Example_Catboost.ipynb),
+#### [5. Random Forest](examples/Example_RandomForest.ipynb)
+#### [6. Prophet](examples/Example_Prophet.ipynb),
+#### [7. Fourie](examples/Example_Fourie.ipynb),
+#### [8. CrostonTSB](examples/Example_Croston.ipynb),
+#### [9. SARIMA](examples/Example_SARIMA.ipynb).
 

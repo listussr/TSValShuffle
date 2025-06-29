@@ -22,6 +22,7 @@ from .custom_algorithms import (
     _Holt_,
     _ExponentialSmoothing_,
     _SARIMAX_,
+    _PolynomialRegression
 )
 
 import pandas as pd
@@ -36,7 +37,7 @@ class _ModelAdapter:
             "Elastic Net": {"model": ElasticNet, "shuffle": True, "fit_type": 'sklearn'},
             "Huber": {"model": HuberRegressor, "shuffle": True, "fit_type": 'sklearn'},
             "Lasso": {"model": Lasso, "shuffle": True, "fit_type": 'sklearn'},
-            #"Polynomial": 
+            "Polynomial": {"model": _PolynomialRegression, "shuffle": True, "fit_type": 'sklearn'},
             "RANSAC": {"model": RANSACRegressor, "shuffle": True, "fit_type": 'sklearn'},
             "Ridge": {"model": Ridge, "shuffle": True, "fit_type": 'sklearn'},
             "TheilSen": {"model": TheilSenRegressor, "shuffle": True, "fit_type": 'sklearn'},

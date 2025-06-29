@@ -1,0 +1,24 @@
+{
+  "init_params": {
+    "model_name": "Holt Winters",
+    "params": {
+      "initialization_method": "estimated",
+      "trend": "add",
+      "seasonal": "add",
+      "seasonal_periods": 12
+    }
+  },
+  "split_params": {
+    "method": "expanding",
+    "n_splits": 10
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": false,
+    "extra_fit_params": {
+      "optimized": true
+    }
+  }
+}

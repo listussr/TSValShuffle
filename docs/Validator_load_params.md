@@ -1,6 +1,6 @@
 ### Метод ```load_params(str)``` принимает путь к JSON файлу с конфигурацией модели.
 
-### JSON файл должен иметь следующую [структуру](../examples/data/validation_params_elastic.json).
+### JSON файл должен иметь следующую [структуру](../examples/data/configs/params/validation_params_elastic.json).
 
 ___
 ### Состав файла

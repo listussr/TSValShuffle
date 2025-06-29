@@ -3,6 +3,11 @@ import numpy as np
 import logging
 from catboost.core import CatBoostRegressor
 
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+
 from symfit import (
     parameters, 
     variables, 
@@ -536,3 +541,89 @@ class _ExponentialSmoothing_:
         if not self._fitted:
             raise ValueError("Model is not fitted yet.")
         return self.results.summary()
+
+class _PolynomialRegression(BaseEstimator, RegressorMixin):
+    
+    def __init__(self, degree=2, include_bias=True, fit_intercept=True):
+        """
+        Конструктор полиномиальной регрессии
+
+        Args:
+            degree (int, optional): Степень полиномиальных признаков. Defaults to 2.
+            include_bias (bool, optional): Флаг наличия смещения. Defaults to True.
+            fit_intercept (bool, optional): Флаг вычисления intercept для линейной модели. Defaults to True.
+            normalize (bool, optional): Флаг нормализации признаков. Defaults to False.
+        """
+        self.degree = degree
+        self.include_bias = include_bias
+        self.fit_intercept = fit_intercept
+        self.linear_regression_ = LinearRegression(
+            fit_intercept=self.fit_intercept,
+            copy_X=True,
+        )
+        self.polynomial_features_ = PolynomialFeatures(
+            degree=self.degree, 
+            include_bias=self.include_bias
+        )
+        
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> '_PolynomialRegression':
+        """
+        Метод обучения полиномиальной регрессии
+
+        Args:
+            X (pd.DataFrame): Матрица признаков
+            y (pd.Series): Вектор истинных меток
+
+        Returns:
+            '_PolynomialRegression'
+        """
+        
+        self._feature_names = getattr(X, 'columns', None)
+        self._target_name = getattr(y, 'name', None)
+        X = X.values
+        y = y.values
+
+        X, y = check_X_y(X, y)
+        
+        
+        X_poly = self.polynomial_features_.fit_transform(X)
+        
+        self.linear_regression_.fit(X_poly, y)
+        
+        self.coef_ = self.linear_regression_.coef_
+        self.intercept_ = self.linear_regression_.intercept_
+        
+        return self
+    
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        """
+        Получение предсказания модели
+
+        Args:
+            X (pd.DataFrame): Данные для предсказания
+
+        Returns:
+            pd.Series: Предсказанный результат
+        """
+        check_is_fitted(self, ['polynomial_features_', 'linear_regression_'])
+        index = X.index
+        X_np = X.values
+
+        X_np = check_array(X_np)
+        
+        X_poly = self.polynomial_features_.transform(X_np)
+        y_pred = self.linear_regression_.predict(X_poly)
+        
+        return pd.Series(y_pred, index=index, name=self._target_name)
+    
+    def get_params(self, deep=True):
+        return {
+            'degree': self.degree,
+            'include_bias': self.include_bias,
+            'fit_intercept': self.fit_intercept,
+        }
+    
+    def set_params(self, **parameters):
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self

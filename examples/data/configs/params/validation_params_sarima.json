@@ -1,0 +1,22 @@
+{
+  "init_params": {
+    "model_name": "SARIMA",
+    "params": {
+      "order": [1, 1, 1],
+      "seasonal_order": [1, 1, 1, 12],
+      "trend": "t",
+      "enforce_stationarity": false,
+      "enforce_invertibility": false
+    }
+  },
+  "split_params": {
+    "method": "rolling",
+    "n_splits": 10
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": false
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "init_params": {
+    "model_name": "CrostonTSB",
+    "params": {
+      "alpha": 0.15,
+      "beta": 0.95,
+      "time_step": "MS"
+    }
+  },
+  "split_params": {
+    "method": "rolling",
+    "n_splits": 5
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": true,
+    "extra_fit_params": {},
+    "add_feature_params": {}
+  }
+}
