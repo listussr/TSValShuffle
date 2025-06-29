@@ -16,7 +16,7 @@ class FeaturesGenerator:
         self.path = config_path
 
         # статистики
-        self.agg_functions = {
+        self.__agg_functions = {
             'mean': np.mean,
             'sum': np.sum,
             'max': np.max,
@@ -26,7 +26,7 @@ class FeaturesGenerator:
         }
 
         # арифметические операции для сдвиговых признаков
-        self.operations = {
+        self.__operations = {
             'diff': np.subtract,
             'sum': np.add,
             'mul': np.multiply,
@@ -34,7 +34,7 @@ class FeaturesGenerator:
         }
 
         # единицы времени
-        self.time_units = {
+        self.__time_units = {
             'second': lambda x: x.dt.second,
             'minute': lambda x: x.dt.minute,
             'hour': lambda x: x.dt.hour,
@@ -46,7 +46,7 @@ class FeaturesGenerator:
         }
 
         # единицы времени для подсчёта относительного времени
-        self.relative_time_units = {
+        self.__relative_time_units = {
             'total_second': lambda x1, x2: (x1 - x2).dt.total_seconds(),
             'hour': lambda x1, x2: (x1 - x2).dt.total_seconds() / 3600,
             'minute': lambda x1, x2: (x1 - x2).dt.total_seconds() / 60,
@@ -55,7 +55,7 @@ class FeaturesGenerator:
             'year': lambda x1, x2: x1.dt.year - x2.year - ((x1.dt.month < x2.month) | ((x1.dt.month == x2.month) & (x1.dt.day < x2.day)))
         }
 
-        self.cycle_function = {
+        self.__cycle_function = {
             "sin": np.sin,
             "cos": np.cos,
         }
@@ -151,7 +151,7 @@ class FeaturesGenerator:
                 source_col = df[feature["source"]]
                 shifted_col = df[feature["source"]].shift(feature["window"])
 
-                operation = self.operations[feature["operation"]] # устанавливаем выбранную арифметическую операцию
+                operation = self.__operations[feature["operation"]] # устанавливаем выбранную арифметическую операцию
 
                 df[feature["name"]] = operation(source_col, shifted_col)  # Создаём новые признаки
 
@@ -184,7 +184,7 @@ class FeaturesGenerator:
                 _validate_json_values("source", feature, str)
                 _validate_json_values("window", feature, int)
                 _validate_json_values("agg", feature, str)
-                agg_function = self.agg_functions[feature["agg"]] # устанавливаем выбранную статистику
+                agg_function = self.__agg_functions[feature["agg"]] # устанавливаем выбранную статистику
 
                 df[feature["name"]] = df[feature["source"]].rolling(window=feature["window"]).apply(agg_function, raw=True)  # Создаём новые признаки
                 
@@ -228,7 +228,7 @@ class FeaturesGenerator:
                 _validate_json_values("source", feature, str)
                 _validate_json_values("time_unit", feature, str)
                 # значение периода времени
-                fetch_time_unit = self.time_units[feature["time_unit"]]
+                fetch_time_unit = self.__time_units[feature["time_unit"]]
 
                 # столбец, из которого получаем время
                 source = feature.get("source", None)
@@ -242,7 +242,7 @@ class FeaturesGenerator:
                 if cycle != None:
                     _validate_json_values("function", feature, str)
                     _validate_json_values("cycle", feature, int)
-                    cycle_function = self.cycle_function[cycle_function]
+                    cycle_function = self.__cycle_function[cycle_function]
 
                     df[feature["name"]] = cycle_function(2 * np.pi * df[feature["name"]] / cycle)
 
@@ -283,7 +283,7 @@ class FeaturesGenerator:
                 _validate_json_values("time_unit", feature, str)
                 # значение периода времени
                 unit = feature.get("time_unit", None)
-                fetch_time_unit = self.relative_time_units[unit]
+                fetch_time_unit = self.__relative_time_units[unit]
                 
                 # столбец, из которого получаем время
                 source = feature.get("source", None)

@@ -1,0 +1,23 @@
+{
+  "init_params": {
+    "model_name": "Random Forest",
+    "params": {
+      "n_estimators": 50,
+      "max_depth": 5,
+      "min_samples_split": 2,
+      "min_samples_leaf": 1,
+      "random_state": 42
+    }
+  },
+  "split_params": {
+    "method": "expanding",
+    "n_splits": 10
+  },
+  "validate_params": {
+    "metric": "WAPE",
+    "target_feature": "value",
+    "time_feature": "date",
+    "shuffling": true,
+    "extra_fit_params": {}
+  }
+}

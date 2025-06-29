@@ -53,15 +53,15 @@ class TestAggregationFunctions:
     def test_agg_functions(self, mock_file):
         instance = FeaturesGenerator("dummy_path.json")
         test_data = [1, 2, 3]
-        assert instance.agg_functions["mean"](test_data) == 2.0
-        assert instance.agg_functions["sum"](test_data) == 6
+        assert instance.__agg_functions["mean"](test_data) == 2.0
+        assert instance.__agg_functions["sum"](test_data) == 6
 
 class TestTimeUnits:
     @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(VALID_CONFIG))
     def test_time_units(self, mock_file):
         instance = FeaturesGenerator("dummy_path.json")
         test_date = pd.Series([datetime(2023, 1, 1)])
-        assert instance.time_units["day"](test_date)[0] == 1
+        assert instance.__time_units["day"](test_date)[0] == 1
 
 class TestRelativeTimeUnits:
     @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(VALID_CONFIG))
@@ -69,13 +69,13 @@ class TestRelativeTimeUnits:
         instance = FeaturesGenerator("dummy_path.json")
         date1 = pd.Series([datetime(2023, 1, 2)])
         date2 = pd.Series([datetime(2023, 1, 1)])
-        assert instance.relative_time_units["day"](date1, date2)[0] == 1.0
+        assert instance.__relative_time_units["day"](date1, date2)[0] == 1.0
 
 class TestCycleFunctions: 
     @patch("builtins.open", new_callable=mock_open, read_data=json.dumps(VALID_CONFIG))
     def test_cycle_functions(self, mock_file):
         instance = FeaturesGenerator("dummy_path.json")
-        assert instance.cycle_function["sin"](0) == 0.0
+        assert instance.__cycle_function["sin"](0) == 0.0
 
 
 @pytest.fixture

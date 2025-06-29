@@ -1,12 +1,10 @@
-## TSValShuffle - модуль для упрощения процесса кросс-валидации временных рядов 
+## TSValShuffle
 
-### Основной элемент модуля - класс [Validate](src/ts_val_shuffle/validate.py).
-
-### В дополнение к нему идёт модуль [FeaturesGenerator](src/ts_val_shuffle/features_generation.py).
+### [_> Полная документация к модулю](docs/main.md)
 
 ___
 
-### Основное назначение класса [Validate](src/ts_val_shuffle/validate.py) состоит в упрощении процесса кросс-валидации временных рядов с использованием следующих алгоритмов машинного обучения:
+### Основное назначение модуля состоит в упрощении процесса кросс-валидации временных рядов с использованием следующих алгоритмов машинного обучения:
 
 1) Elastic Net,
 2) Huber,
@@ -27,11 +25,11 @@ ___
 17) CrostonTSB,
 18) Rolling mean.
 
-### Примеры использования данного класса:
-### [1. Elastic Net](examples/Example_ElasticNet.ipynb),
-### [2. Holt Winters](examples/Example_ExpSmoothing.ipynb),
-### [3. Catboost](examples/Example_Catboost.ipynb),
-### [4. Prophet](examples/Example_Prophet.ipynb),
-### [5. Fourie](examples/Example_Fourie.ipynb),
-### [6. CrostonTSB](examples/Example_Croston.ipynb).
+### Примеры использования модуля:
+#### [1. Elastic Net](examples/Example_ElasticNet.ipynb),
+#### [2. Holt Winters](examples/Example_ExpSmoothing.ipynb),
+#### [3. Catboost](examples/Example_Catboost.ipynb),
+#### [4. Prophet](examples/Example_Prophet.ipynb),
+#### [5. Fourie](examples/Example_Fourie.ipynb),
+#### [6. CrostonTSB](examples/Example_Croston.ipynb).
 

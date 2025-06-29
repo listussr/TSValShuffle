@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import pandas as pd
 
@@ -14,6 +15,8 @@ from .utils import (
     MAPE,
     SMAPE,
     WAPE,
+    _validate_json_keys,
+    _validate_json_values,
 )
 
 class Validator:
@@ -31,8 +34,9 @@ class Validator:
             "expanding": _ExpandingTimeSeriesSplitLoader_,
         }
         self.metric_values = []
+        self.best_model = {"metric": None, "model": None, "fold_num": None}
 
-    def set_model(self, model_name: str, params: dict) -> 'Validator':
+    def __set_model(self, model_name: str, params: dict) -> 'Validator':
         """
         Метод инициализации используемой модели
 
@@ -43,7 +47,7 @@ class Validator:
         Returns:
             Validator:
         """
-        self.init_params = params
+        self.__init_params = params
         self.adapter.set_model(model_name, params)
         return self
 
@@ -75,11 +79,108 @@ class Validator:
         """
         if self.ts is None or self.ts.empty:
             raise RuntimeError(f"Field [ts] is None. Call [set_data()] beafore calling [set_generator()]")
-        self.generator = FeaturesGenerator(json_path)
-        self.generated_ts = self.generator.generate_features(self.ts)
+        self.__generator = FeaturesGenerator(json_path)
+        self.generated_ts = self.__generator.generate_features(self.ts)
         return self
     
-    def set_split_method(self, method: str, n_splits: int, test_size: int=None) -> 'Validator':
+    def __load_config(self, json_path: str) -> dict:
+        """
+        Загрузка конфигурации признаков из JSON
+        Args:
+            json_path (str): Путь к JSON файлу с конфигурацией
+        """
+        with open(json_path, 'r') as file:
+            config = json.load(file)
+
+        return config
+
+    def __validate_init_params(self) -> None:
+        """
+        Метод валидации параметров инициализации модели
+
+        Args:
+            init_params (dict): Параметры инициализации модели
+
+        Raises:
+            KeyError: Ошибка отсутствия обязательных параметров
+            TypeError: Ошибка несоответствия типов параметров
+        """
+        _validate_json_keys({"model_name": str, "params": dict}, self.__init_params)
+        _validate_json_values("model_name", self.__init_params, str)
+        _validate_json_values("params", self.__init_params, dict)
+
+    def __validate_split_params(self) -> None:
+        """
+        Метод валидации параметров схемы кросс-валидации
+
+        Raises:
+            KeyError: Ошибка отсутствия обязательных параметров
+            TypeError: Ошибка несоответствия типов параметров
+        """
+        _validate_json_keys({"method": str, "n_splits": int, "test_size": int}, self.__split_params)
+        _validate_json_values("method", self.__split_params, str)
+        _validate_json_values("n_splits", self.__split_params, int)
+        if self.__split_params.get("test_size", None) != None:
+            _validate_json_values("test_size", self.__split_params, int)
+
+    def __validate_validation_params(self) -> None:
+        """
+        Метод валидации параметров валидации модели
+
+        Raises:
+            KeyError: Ошибка отсутствия обязательных параметров
+            TypeError: Ошибка несоответствия типов параметров
+        """
+        valid_keys = {
+            "metric": str, 
+            "target_feature": str, 
+            "time_feature": str, 
+            "shuffling": bool, 
+            "extra_fit_params": dict,
+            "add_feature_params": dict
+        }
+        _validate_json_keys(valid_keys, self.__validation_params)
+        _validate_json_values("metric", self.__validation_params, str)
+        _validate_json_values("target_feature", self.__validation_params, str)
+        _validate_json_values("time_feature", self.__validation_params, str)
+        if self.__validation_params.get("shuffling", None) != None:
+            _validate_json_values("shuffling", self.__validation_params, bool)
+        else:
+            # если shuffling не указан, то по умолчанию False
+            self.__validation_params["shuffling"] = False
+        # по умолчанию пустой словарь
+        if self.__validation_params.get("extra_fit_params", None) != None:
+            _validate_json_values("extra_fit_params", self.__validation_params, dict)
+        else:
+            # если extra_fit_params не указан, то по умолчанию пустой словарь
+            self.__validation_params["extra_fit_params"] = {}
+        # персонально для Prophet
+        if self.__validation_params.get("add_feature_params", None) != None:
+            _validate_json_values("add_feature_params", self.__validation_params, dict)
+        else:
+            # если add_feature_params не указан, то по умолчанию пустой словарь
+            self.__validation_params["add_feature_params"] = {}
+
+    def load_params(self, json_path: str) -> 'Validator':
+        """
+        Метод загрузки параметров модели из JSON файла
+
+        Args:
+            json_path (str): Путь к JSON файлу с параметрами
+
+        Returns:
+            Validator:
+        """
+        self.params = self.__load_config(json_path)
+        self.__init_params = self.params.get("init_params", {})
+        self.__validate_init_params()
+        self.__split_params = self.params.get("split_params", {})
+        self.__validate_split_params()
+        self.__validation_params = self.params.get("validate_params", {})
+        self.__validate_validation_params()
+        return self
+
+    def __set_split_method(self, method: str, n_splits: int, test_size: int=None) -> 'Validator':
         """
         Метод установки схемы кросс-валидации
 
@@ -210,13 +311,22 @@ class Validator:
         return result
 
     def __add_regressor(self, train: pd.DataFrame, target_feature: str, time_feature: str, add_feature_params: dict={}) -> None:
+        """
+        Добавление регрессоров в модель Prophet
+
+        Args:
+            train (pd.DataFrame): обучающая выборка
+            target_feature (str): название целевого признака
+            time_feature (str): название временного признака
+            add_feature_params (dict, optional): дополнительные параметры для добавления регрессоров. Defaults to {}.
+        """
         train = train.rename(columns={time_feature: 'ds', target_feature: 'y'})
         features = train.drop(columns=['ds', 'y']).columns.to_list()
         for feature in features:
             extra_params = add_feature_params.get(feature, {})
             self.adapter.add_regressor(feature, extra_params)
 
-    def validate(self, metric: str, target_feature: str, time_feature: str, extra_fit_params: dict={}, 
+    def __validate(self, metric: str, target_feature: str, time_feature: str, extra_fit_params: dict={}, 
                  shuffling: bool=False, add_feature_params: dict={}):
         """
         Метод валидации выбранной модели на временном ряду
@@ -259,7 +369,7 @@ class Validator:
         while learning_flag:
             # костыль для prophet
             if self.adapter.adapter_config['fit_type'] == 'prophet':
-                self.set_model("Prophet", self.init_params)
+                self.set_model("Prophet", self.__init_params)
             train, test = self.split_handler.get_current_fold()
             fit_data = self.__form_fit_data(train, target_feature, time_feature, shuffling and self.adapter.adapter_config['shuffle'])
             fit_params = {**fit_data, **extra_fit_params}
@@ -268,16 +378,66 @@ class Validator:
             prediction = self.__test_model(test, target_feature, time_feature)
 
             self.metric_values.append(self.metric(prediction, test[target_feature]))
+            if self.best_model['metric'] is None or self.best_model['metric'] > self.metric_values[-1]:
+                self.best_model['metric'] = self.metric_values[-1]
+                self.best_model['model'] = self.adapter.model if self.adapter.fitted_model != None else self.adapter.fitted_model
+                self.best_model['fold_num'] = self.split_handler.fold_num
             learning_flag = self.split_handler.next_fold()
 
+    def validate(self):
+        self.__set_model(**self.__init_params)
+        self.__set_split_method(**self.__split_params)
+        self.__validate(**self.__validation_params)
+
     def predict(self, kwargs):
+        """Метод предсказания
+
+        Args:
+            kwargs (_type_): см. документацию для разных моделей
+
+        Returns:
+            pd.Series: series с предсказанием
+        """
         return self.adapter.predict(kwargs)
     
     def forecast(self, kwargs):
+        """Метод предсказания на какое-то количество шагов для statsmodels
+
+        Args:
+            kwargs (_type_): см. документацию statsmodels
+
+        Returns:
+            pd.Series: series с предсказанием
+        """
         return self.adapter.forecast(kwargs)
     
     def plot(self, kwargs):
+        """Метод отрисовки для Prophet
+
+        Args:
+            kwargs (_type_): Парметры для отрисовки (см. документацию Prophet)
+
+        Returns:
+            _type_: см. документацию Prophet
+        """
         return self.adapter.plot(kwargs)
     
     def plot_components(self, kwargs):
+        """Метод отрисовки компонент для Prophet
+
+        Args:
+            kwargs (_type_): Парметры для отрисовки (см. документацию Prophet)
+
+        Returns:
+            _type_: см. документацию Prophet
+        """
         return self.adapter.plot_components(kwargs)
+    
+    def get_best_model(self) -> dict:
+        """
+        Метод получения лучшей модели по метрике
+
+        Returns:
+            dict: Словарь с лучшей моделью, метрикой и номером фолда
+        """
+        return self.best_model
