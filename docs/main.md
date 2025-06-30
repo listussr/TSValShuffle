@@ -47,3 +47,5 @@ ___
 ### [_> Класс Validator](Validator.md).
 
 ### [_> Класс FeaturesGenerator](FeaturesGenerator.md).
+
+### [_> Описание алгоритмов](CustomAlgorithms.md).

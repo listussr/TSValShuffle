@@ -442,7 +442,6 @@ class _SARIMAX_:
 
 class _SimpleExpSmoothing_:
     def __init__(self, *args, **kwargs):
-        # Здесь можно сохранить параметры, если нужны
         self.args = args
         self.kwargs = kwargs
         self._fitted = False
@@ -542,6 +541,7 @@ class _ExponentialSmoothing_:
             raise ValueError("Model is not fitted yet.")
         return self.results.summary()
 
+
 class _PolynomialRegression(BaseEstimator, RegressorMixin):
     
     def __init__(self, degree=2, include_bias=True, fit_intercept=True):
@@ -552,7 +552,6 @@ class _PolynomialRegression(BaseEstimator, RegressorMixin):
             degree (int, optional): Степень полиномиальных признаков. Defaults to 2.
             include_bias (bool, optional): Флаг наличия смещения. Defaults to True.
             fit_intercept (bool, optional): Флаг вычисления intercept для линейной модели. Defaults to True.
-            normalize (bool, optional): Флаг нормализации признаков. Defaults to False.
         """
         self.degree = degree
         self.include_bias = include_bias
